@@ -1,0 +1,282 @@
+\documentclass[12pt, a4paper]{article}
+
+\usepackage[hmargin=2.5cm, vmargin=2cm]{geometry}
+\usepackage{amsthm, amssymb, mathtools, yhmath, graphicx}
+\usepackage{fontspec, type1cm, titlesec, titling, fancyhdr, tabularx}
+\usepackage{color, float, hhline}
+
+\usepackage[abbreviations, per-mode=symbol]{siunitx}
+%\usepackage{luatexja-fontspec}
+\usepackage[CheckSingle, CJKmath]{xeCJK}
+\usepackage{CJKulem}
+\usepackage{enumitem}
+\usepackage{tikz}
+\usepackage{csquotes}
+\usepackage{algorithm2e}
+\usepackage{circuitikz}
+\usepackage{parskip}
+\usepackage{bm}
+%\setCJKmainfont[BoldFont=cwTex Q Hei]{cwTex Q Ming}
+%\setCJKsansfont[BoldFont=cwTex Q Hei]{cwTex Q Ming}
+%\setCJKmonofont[BoldFont=cwTex Q Hei]{cwTex Q Ming}
+\setCJKmainfont[BoldFont=cwTeX Q Hei]{cwTeX Q Ming}
+
+\def\normalsize{\fontsize{12}{18}\selectfont}
+\def\large{\fontsize{14}{21}\selectfont}
+\def\Large{\fontsize{16}{24}\selectfont}
+\def\LARGE{\fontsize{18}{27}\selectfont}
+\def\huge{\fontsize{20}{30}\selectfont}
+
+%\titleformat{\section}{\bf\Large}{\arabic{section}}{24pt}{}
+%\titleformat{\subsection}{\large}{\arabic{subsection}.}{12pt}{}
+%\titlespacing*{\subsection}{0pt}{0pt}{1.5ex}
+
+\parindent=0pt
+
+\DeclarePairedDelimiter{\abs}{\lvert}{\rvert}
+\DeclarePairedDelimiter{\norm}{\lVert}{\rVert}
+\DeclarePairedDelimiter{\inpd}{\langle}{\rangle}
+\DeclarePairedDelimiter{\ceil}{\lceil}{\rceil}
+\DeclarePairedDelimiter{\floor}{\lfloor}{\rfloor}
+
+\DeclareMathOperator*{\argmax}{arg\,max}
+
+\newtheorem{lemma}{Lemma}
+\newcommand{\img}{\mathsf{i}}
+\newcommand{\ex}{\mathsf{e}}
+\newcommand{\dD}{\mathrm{d}}
+\newcommand{\dI}{\,\mathrm{d}}
+\newcommand{\defeq}{\triangleq}
+\DeclareMathOperator*{\ord}{\mathcal{O}}
+\setlength{\droptitle}{-1.5cm} %title 與上緣的間距
+\title{Algorithm HW\#2}
+\author{B02901178 江誠敏}
+
+\begin{document}
+\maketitle
+\section{Problem 1.}
+
+First we define some notation. $\mathcal{N} = \{1, 2, \dots, n\}$ would be the elements
+and $\mathcal{S} = \{S_1, \dots, S_m\}$ would be the sets in the set cover problem,
+where each $S_i \subseteq \mathcal{N}$. Let $w_i = w(S_i)$ be the cost to choose $S_i$.
+The corresponding relaxed LP is:
+
+\begin{equation} \label{eq:set-cover-lp}
+  \begin{array}{>{\displaystyle}l>{\displaystyle}r>{\displaystyle}l}
+    \text{minimize} & \multicolumn{1}{l}{\displaystyle \sum_{S_i \in \mathcal{S}} w_i x_i} \\[10pt]
+    \text{s.t.} & \sum_{j \in S_i} x_i \geq 1, & \ \forall j \in \mathcal{N} \\
+  \end{array}
+\end{equation}
+
+The dual LP is
+
+\begin{equation} \label{eq:set-cover-dual-lp}
+  \begin{array}{>{\displaystyle}l>{\displaystyle}r>{\displaystyle}l}
+    \text{maximize} & \multicolumn{1}{l}{\displaystyle \sum_{j \in \mathcal{N}} \alpha_j} \\[10pt]
+    \text{s.t.} & \sum_{j \in S_i} \alpha_j \leq w_i, & \ \forall S_i \in \mathcal{S} \\
+  \end{array}
+\end{equation}
+
+The greedy algorithm mentioned in class could be extend to give a dual feasible solution.
+
+\RestyleAlgo{boxruled}
+\LinesNumbered
+\begin{algorithm}[H]
+  \DontPrintSemicolon
+  $C \gets \mathcal{N}$ \quad \tcp*[l]{Elements that has not been covered}
+  \While{$C \neq \varnothing$}{
+    Find a set $S$ with $S \cap C \neq \varnothing$ and minimize $t = w(S) / \abs{S \cap C}$. \;
+    Set $\alpha_j \gets t / H_k$, for each $j \in S \cap C$. \tcc*[r]{\small $j$ is covered in this round}
+    Choose $S$. \tcc*[r]{The cost is $w(S) = t \abs{S \cap C} = \sum_{j \in S \cap C} H_k \alpha_j$}
+    $C \gets C \setminus S$. \;
+  }
+  \caption{The greedy algorithm taught in class}
+\end{algorithm} \medskip
+
+If this algorithm indeed gives a feasible dual solution $\bm{\alpha} = (\alpha_i)$,
+then it is easy to see that the algorithm would give a solution of the set cover problem
+with cost equal to $H_k \sum \alpha_i$, and
+\[ H_k \sum \alpha_j \leq H_k \,\mathrm{OPT}_\mathrm{LP,dual} = H_k \,\mathrm{OPT}_\mathrm{LP,primal}
+  \leq H_k \,\mathrm{OPT}_\mathrm{ILP,primal} \]
+Thus it is an $H_k$-approximation solution.
+
+Now, for any set $S = S_i$, we shall prove that $\sum_{j \in S} \alpha_j \leq w(S)$.
+Assume that $S = \{e_1, e_2, \dots, e_h\}, \, h \leq k$, and let $t_i$ be the time (round)
+which $e_i$ is covered. Reorder the element so we could assume that $t_1 \leq t_2 \leq \dots \leq t_h$.
+Just before $e_i$ is choosen, if we choose $S$ to cover $e_i$, the cost is $w(S) / (h-i+1)$,
+thus we must have $\alpha_{e_i} \leq w(S)/((h-i+1)H_k)$.
+Hence
+\[ \sum \alpha_{e_i} \leq w(S) H_k \left( \frac{1}{1} + \frac{1}{2} + \dots + \frac{1}{h} \right)
+  \leq w(S) H_h / H_k \leq w(S) \]
+and the prove is completed.
+
+\section{Problem 2.}
+
+Similar to problem 1., the corresponding relaxed LP is now:
+
+\begin{equation} \label{eq:set-cover2-lp}
+  \begin{array}{>{\displaystyle}l>{\displaystyle}r>{\displaystyle}l}
+    \text{minimize} & \multicolumn{1}{l}{\displaystyle \sum_{S_i \in \mathcal{S}} w_i x_i} \\[10pt]
+    \text{s.t.} & \sum_{j \in S_i} x_i \geq k_j, & \ \forall j \in \mathcal{N} \\
+  \end{array}
+\end{equation}
+
+The dual LP is
+
+\begin{equation} \label{eq:set-cover2-dual-lp}
+  \begin{array}{>{\displaystyle}l>{\displaystyle}r>{\displaystyle}l}
+    \text{maximize} & \multicolumn{1}{l}{\displaystyle \sum_{j \in \mathcal{N}} k_j \alpha_j} \\[10pt]
+    \text{s.t.} & \sum_{j \in S_i} \alpha_j \leq w_i, & \ \forall S_i \in \mathcal{S} \\
+  \end{array}
+\end{equation}
+
+We make a small modification to the algorithm.
+
+\begin{algorithm}[H] \label{algo:modified-greedy}
+  \DontPrintSemicolon
+  $C \gets \mathcal{N}$ \quad \tcp*[l]{Elements that has not been covered}
+  \lForEach(\quad \tcp*[h]{\small $y_j$ is the number of time $j$ is covered})
+  {$j \in \mathcal{N}$}{$\alpha_j \gets 0$, $y_j \gets 0$}
+  \While{$C \neq \varnothing$}{
+    Find a set $S$ with $S \cap C \neq \varnothing$ and minimize $t = w(S) / \abs{S \cap C}$. \; \label{ln:define-t}
+    Define $D \defeq S \cap C$. \;
+    \ForEach(\tcc*[f]{\small We say $j$ is \textbf{covered once} in this round}){$j \in D$}{
+      $\alpha_j \gets \alpha_j + t / (H_n k_j)$ \;
+      $y_j \gets y_j + 1$ \;
+      \If(\tcc*[f]{\small We say $j$ is \textbf{fully covered} in this round}){$y_j = k_j$} {
+        $C \gets C \setminus \{ j \}$. \;
+      }
+    }
+    Choose $S$.
+  }
+  \caption{The modified greedy algorithm}
+\end{algorithm} \medskip
+
+In each round The cost of choosing $S$ is
+\[ w(S) = w(S) \abs{D} / \abs{D} = H_n \sum_{j \in D} k_j t / (H_n k_j) = H_n \sum_{j \in D} k_j \Delta \alpha_j, \]
+where $\Delta \alpha_j$ is the amount of change of $\alpha_j$ in that round.
+Thus the algorithm give a solution of the set cover problem with cost $H_n \sum k_j \alpha_j$.
+
+So again, if we could prove that $\bm{\alpha} = (\alpha_i)$ is a feasible solution to the dual problem
+\eqref{eq:set-cover2-dual-lp}, then
+\[ H_n \sum \alpha_j \leq H_n \,\mathrm{OPT}_\mathrm{LP,dual} = H_n \,\mathrm{OPT}_\mathrm{LP,primal}
+  \leq H_n \,\mathrm{OPT}_\mathrm{ILP,primal}, \]
+and the solution would be an $H_n$-approximation solution.
+
+Similarly, for any set $S = S_i$,
+Assume that $S = \{e_1, e_2, \dots, e_h\}$, and let $t_i$ be the time (round)
+which $e_i$ is {\bf fully covered}. Reorder the element so we could assume that $t_1 \leq t_2 \leq \dots \leq t_h$.
+Notice that each element $e_i$ would be {\bf covered once} exactly $k_{e_i}$ times,
+and these all happen before $e_i$ is fully covered.
+
+Consider once in this $k_{e_i}$ times when $e_i$ is covered once.
+Let $j \defeq e_i$. The change of $\alpha_{e_i}$ is
+$\Delta \alpha_{e_i} = t / H_n k_{e_i}$ where $t$ is defined in line~\ref{ln:define-t} of algorithm~\ref{algo:modified-greedy}.
+If we choose $S$, then $w(S) / \abs{S \cap C} \leq w(S) / (h - i + 1)$. Thus by the minimality
+of $t$, we must have $t \leq w(S) / (h-i+1)$.
+Hence
+\[ \alpha_{e_i} = \sum \Delta \alpha_{e_i} \leq k_{e_i} \cdot \frac{w(S)}{(h-i+1) H_n k_{e_i}}
+  = \frac{w(S)}{h-i+1}H_n^{-1} \]
+So
+\[ \sum \alpha_{e_i} \leq \sum_i \frac{w(S)}{h-i+1} H_n^{-1} = w(S) \frac{H_h}{H_n} \leq w(S) \]
+And we conclude that $\bm{\alpha}$ is indeed a feasible solution.
+
+\section{Problem 3.}
+The relaxed LP correspond to the vertex cover is:
+\begin{equation} \label{eq:vertex-cover-lp}
+  \begin{array}{>{\displaystyle}l>{\displaystyle}r>{\displaystyle}l}
+    \text{minimize} & \multicolumn{1}{l}{\displaystyle \sum_{v \in V} w_v x_v} \\[10pt]
+    \text{s.t.} & x_u + x_v \geq 1, & \ \forall (u, v) \in E \\
+  \end{array}
+\end{equation}
+
+Let $E(v)$ be all the edges adjacent to $v$, the dual LP is
+
+\begin{equation} \label{eq:set-cover2-dual-lp}
+  \begin{array}{>{\displaystyle}l>{\displaystyle}r>{\displaystyle}l}
+    \text{maximize} & \multicolumn{1}{l}{\ \,\displaystyle \sum_{e \in E} \alpha_e} \\[10pt]
+    \text{s.t.} & \sum_{e \in E(v)} \alpha_e \leq w_v, & \ \forall v \in V \\
+  \end{array}
+\end{equation}
+
+Investigating the complementary slackness, we have
+\[ \sum_e \alpha_e \leq \sum_{e} \footnote{$(u, v) = e$ here} \alpha_e (x_u + x_v)
+  = \sum_v x_v \sum_{e \in E(v)} \alpha_e \leq \sum_v w_v x_v \]
+
+Clearly we only need to consider the solution which every $x_v \leq 1$, so we can
+assume $x_v + x_u \leq 2, \, \forall (u, v) \in E$. Then if either $x_v = 0$
+or $\sum_{e \in E(v)} \alpha_e = w_v$ for each $v \in V$, we would have
+
+\[ \sum_v w_v x_v = \sum_v x_v \sum_{e \in E(v)} \alpha_e = \sum_e \alpha_e (x_u + x_v)
+  \leq 2 \sum_e \alpha_e \]
+
+Thus if these an algorithm satisfy
+\begin{enumerate}[itemsep=-4pt, topsep=-2pt]
+  \item It gives a valid vertex cover $S$.
+  \item It induces a feasible dual solution $\bm{\alpha} = (\alpha_e)$.
+  \item The complementary slackness relation is satisfied. That is,
+    for each vertex $v$, either $v$ is not picked into $S$ (i.e., $x_v = 0$),
+    or $\sum_{e \in N(v)} \alpha_e = w_v$.
+\end{enumerate}
+Then this algorithm is a $2$-approximation algorithm. So we check these 3 conditions for
+both algorithms.
+
+\subsection{Algorithm 1}
+\begin{enumerate}
+  \item {\bf It gives a valid vertex cover}: Since eventually each edge is removed,
+    and we only remove covered edge, all edges are covered when the algorithm ends.
+  \item {\bf It induces a feasible dual solution}: Let $\alpha_e = 0$ at the beginning.
+    Define the slackness $\tilde{r}_v$ of a vertex $v$ as $\tilde{r}_v \defeq w_v - \sum_{e \in N(v)} \alpha_e$,
+    Then $\tilde{r}_v = w_v = r_v$ at the very start. Now, when reducing the residual
+    weight $r_v$ by $c \cdot \deg(v)$, we also increase $\alpha_e$ by $c$ for all edges $e$. Then
+    it is easy to see that $\tilde{r}_v$ also decrease by $c \cdot \deg(v)$. Thus $r_v = \tilde{r}_v$
+    in any moment. Since $c \cdot \deg(v) = \min r_v / \deg(v) \cdot \deg(v) = \min r_v$ in each round,
+    we never decrease $r_v$ below zero, thus $\tilde{r}_v \geq 0$ at the end. Hence
+    $\sum_{e \in N(v)} \alpha_e \leq w_v$ for each $v$ when the algorithm ends, and $\bm{\alpha}$
+    is then a feasible dual solution.
+  \item {\bf The complementary slackness relation is satisfied}: It is clear from the statement
+    since we add $v$ into $S$ only when $r_v = \tilde{r}_v = 0$ (i.e., $w_v = \sum_{e \in N(v)} \alpha_e)$.
+\end{enumerate}
+
+\subsection{Algorithm 2}
+\begin{enumerate}
+  \item {\bf It gives a valid vertex cover}: It is clear since the algorithm stops
+    only when each edge is covered.
+  \item {\bf It induces a feasible dual solution}: Similar as in algorithm 1, let $\alpha_e = 0$ at the beginning.
+    When reducing the residual weight $r_u$ and $r_v$ by $t = \min(r_u, r_v)$,
+    also increase $\alpha_e$ by $t$.
+    Then it is easy to see that $\tilde{r}_u, \tilde{r}_v$ also decrease by $t$, thus $\tilde{r}_v$ matches $r_v$.
+    Also $t \leq r_u$ and $t \leq r_v$, so we never decrease $r_v$ below zero. Hence
+    $\sum_{e \in N(v)} \alpha_e \leq w_v$ and we know that $\bm\alpha$ is a feasible solution.
+  \item {\bf The complementary slackness relation is satisfied}: It is clear from the statement
+    since we add $v$ into $S$ only when it has zero residual weight $r_v$.
+
+\end{enumerate}
+
+{\bf Collaborators}: None.
+
+\section{Problem 4.}
+The relaxed LP correspond to the metric uncapacitated facility locating problem with penalty is:
+\begin{equation} \label{eq:facil-lp}
+  \begin{array}{>{\displaystyle}l>{\displaystyle}r>{\displaystyle}c*2{>{\displaystyle}l}}
+    \text{minimize} & \multicolumn{4}{l}{\displaystyle \sum c_{i,j} x_{i,j} + \sum f_i y_i + \sum p_j z_j} \\[10pt]
+    \text{s.t.} & z_j + \sum_i x_{i, j} & \geq & 1, & \forall j \\
+    & y_i - x_{i, j} & \geq & 0, & \forall i, j \\[6pt]
+    & y_i,\, x_{i, j},\, z_j & \geq & 0, & \forall i, j
+  \end{array}
+\end{equation}
+
+The dual LP is:
+\begin{equation} \label{eq:facil-dual-lp}
+  \begin{array}{>{\displaystyle}l>{\displaystyle}r>{\displaystyle}c*2{>{\displaystyle}l}}
+    \text{maximize} & \multicolumn{4}{l}{\displaystyle \sum \alpha_j} \\[10pt]
+    \text{s.t.} & \alpha_j - \beta_{i, j} & \leq & c_{i, j}, & \forall i, j \\[8pt]
+    & \sum_j \beta_{i,j} & \leq & f_i, & \forall i \\
+    & \alpha_j & \leq & p_j, & \forall j \\[8pt]
+    & \alpha_j, \beta_{i, j} & \geq & 0, & \forall i, j
+  \end{array}
+\end{equation}
+
+
+\end{document}
+
