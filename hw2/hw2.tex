@@ -277,6 +277,96 @@ The dual LP is:
   \end{array}
 \end{equation}
 
+Thus we modify the algorithm taught in class as following, where some definition is listed below:
+\begin{itemize}
+  \item If we choose to give up client $j$, we say $j$ is {\bf covered} but {\bf unconnected}.
+  \item If a client $j$ is {\bf connected}, it is simultaneously {\bf covered}.
+  \item If $\beta_{i, j} > 0$, then we say client $j$ {\bf pays} for facility $i$.
+  \item If there is a client $j$ such that $j$ {\bf pays} for both $i, i'$, then we say
+    $i, i'$ are {\bf conflicted} with each other.
+  \item At the end of the algorithm, we choose the facilities that is {\bf truely opened},
+    and connect each {\bf connected} client $j$ to a facility $i$ such that $(i, j)$ is {\bf truely connected}.
+\end{itemize}
+
+\begin{algorithm}[H] \label{algo:facil-algo}
+  \DontPrintSemicolon
+  \tcp{Phase 1}
+  Initially set $\alpha_j \gets 0, \beta_{i, j} \gets 0$. \;
+  \While{There is still a client not covered}{
+    \Repeat{An event $e$ occurs}{ Increase all $a_j$ such that $j$ is not covered yet, until next event. \;  }
+    \Switch{the event $e$}{
+      \Case{$\alpha_j = c_{i, j}$ for some $i, j$}{
+        Call the $(i, j)$ pair \underline{tight}. \;
+        Whenever $\alpha_j$ changes in the future, set $\beta_{i, j} \gets \alpha_j - c_{i, j}$. \;
+        \lIf{$i$ is already \underline{temporarily opened}}{\underline{Connect} $j$ to $i$}
+      }
+      \Case{$\alpha_j = p_j$ for some client $j$}{ \label{ln:alpha-equal-p}
+        Choose not to connect $j$ with penalty $p_j$. \;
+        Call $j$ \underline{covered} but \underline{unconnected}. \;
+      }
+      \Case{$\sum_j \beta_{i, j} = f_i$ for some facility $i$}{
+        \underline{Temporarily open} facility $i$.\;
+        \ForEach{\underline{uncovered} or \underline{unconnected} facility $i$ with $(i, j)$ being \underline{tight}}{
+          \underline{Connect} $j$ to $i$ \label{ln:open-connect}
+        }
+      }
+    }
+  }
+  \tcp{Phase 2}
+  $I \gets$ any maximal set of \underline{temporarily opened} facilities without conflicted. \;
+  \lForEach{facility $i \in I$}{\underline{Truely open} $i$.}
+  \ForEach{connected client $j$}{
+    \lIf{there exists $i \in I$ such that $(i, j)$ is \underline{tight}}
+    {\underline{truely directly connect} $j$ to $i$. \label{ln:tight-connect}}
+    \Else{
+      Let $i$ be the facility such that $j$ is connected to, then $i$ is conflicted with some $i' \in I$
+      since $I$ is maximal. \;
+      \underline{Truely indirectly connect} $j$ to $i'$.
+    }
+  }
+  \caption{The modified greedy algorithm}
+\end{algorithm}
+
+Now we analyze the cost. The cost could be decomposed into three parts:
+\[ X \defeq \sum c_{i, j} x_{i, j}, \quad Y \defeq \sum f_i y_i, \quad Z \defeq \sum p_j z_j \]
+where $x_{i, j} = 1$ if $(i, j)$ truely connected, $y_i = 1$ if facility $i$ is {\bf truely opened}
+and $z_j = 1$ if client $j$ is uncovered (those we give up with penalties), and these value equals
+$0$ otherwise.
+
+Let $I$ be the opened facilities, $U$ be all the uncovered clients, $C_d$ be
+the clients {connected directly}, $C_i$ be the clients {connected indirectly}.
+Define $X_d = \sum\limits_{j \in C_d} c_{i, j} x_{i, j}, X_i = \sum\limits_{j \in C_i} c_{i, j} x_{i, j}$,
+then $X = X_d + X_i$.
+
+For $Z$, by line~\ref{ln:alpha-equal-p} in algorithm~\ref{algo:facil-algo}, $\alpha_j = p_j$
+for these client $j$, thus $Z = \sum_{j \in U} z_j = \sum_{j \in U} \alpha_j$.
+
+For $Y+X_d$,
+\[ Y = \sum_{i \in I} f_i = \sum_{i \in I} \beta_{i, j} = \sum_{\substack{i \in I \\ j \text{ pays for } i}} \beta_{i, j} \]
+Notice that if $j$ pays for $i$, then $(i, j)$ is tight. By line~\ref{ln:open-connect}, $j$ is connected
+and thus $j \not\in U$, also by line~\ref{ln:tight-connect}, $j \not\in C_i$, so
+$j \in C_d$. Since there is no conflict in $I$, each client {pays} for at most one
+facility in $I$, hence
+\[ Y = \sum_{i \in I} f_i \leq \sum_{\substack{i \in I, \\ j \in C_d}} \beta_{i, j} \]
+And we have
+\[ Y + X_d = \sum_{\substack{i \in I, \\ j \in C_d}} \beta_{i, j}
+  + \sum_{\substack{j \in C_d \\ i, j \text{ connected}}} c_{i, j} \ \leq \sum_{j \in C_d} \alpha_j \]
+Since if $(i, j)$ is connected, $(i, j)$ tight and thus $\alpha_j = \beta_{i, j} + c_{i, j}$.
+
+For $X_i$, let $j$ be a client in $C_d$, $i$ be the client $j$ is originally connected to and
+$i' \in I$ be the client $j$ is truely indirectly connected to at the very end.
+Since $i, i'$ are in conflict, there is a client $j'$ such that $j'$ pays for both $i, i'$,
+so $(i, j), (i, j'), (i', j')$ are all tight.
+$j'$ would not be connected after $j$ connected to $i$, or else once $i$ is opened,
+$j'$ would immediately be connected to $i$. Thus $\alpha_{j'} \leq \alpha_j$,
+so $c_{i', j} \leq c_{i', j'} + c_{i, j'} + c_{i, j} \leq \alpha_{j'} + \alpha_{j'} + \alpha_j
+\leq 3 \alpha_j$ since these edges are tight. Hence
+\[ X_i = \sum_{\substack{j \in C_i \\ i', j \text{ connected}}} c_{i', j}
+  \leq 3 \sum_{j \in C_i} \alpha_j \]
+
+Combining all above, we have
+\[ X + Y + Z = X_i + X_d + Y + Z \leq \sum_{j \in U} \alpha_j + \sum_{j \in C_d} \alpha_j
+  + 3 \sum_{j \in C_i} \alpha_j \leq 3 \sum_{j} \alpha_j \]
 
 \end{document}
 
